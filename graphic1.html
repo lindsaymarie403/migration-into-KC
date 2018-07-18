@@ -1,0 +1,183 @@
+<html>
+<head>
+  <title>Graphic 1</title>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,700" rel="stylesheet">
+  <meta charset="utf-8">
+</head>
+
+<style>
+  p {
+    margin: 20px 0px 0px 18px;
+  }
+
+  #head {
+    font: 20px 'Open Sans';
+    font-weight: 700;
+  }
+
+  #sub {
+    font: 16px 'Open Sans';
+    margin-top: 5px;
+    margin-bottom: 20px;
+  }
+
+  #source {
+    font: 10px 'Open Sans';
+    margin-top: 15px;
+  }
+
+  .axis path,
+  .axis line {
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
+  }
+</style>
+
+<body>
+  <p id="head">Moves &amp; Maternity</p>
+  <p id="sub">Kansas City Region Population Growth, 2010-2017</p>
+  <!--<svg width="600" height="350"></svg>-->
+  <div class="chart"></div>
+  <p id="source">Source: U.S. Census Bureau (Lindsay Huth | Flatland)</p>
+
+  <script>
+    var margin = {top: 20, right: 20, bottom: 40, left: 100}
+    var width = 600 - margin.left - margin.right
+    var height = 350 - margin.top - margin.bottom
+    var svg = d3.select('.chart')
+      .append('svg')
+        .attr('width', width + margin.left + margin.right)
+        .attr('height', height + margin.top + margin.bottom)
+        .call(responsivefy);
+
+    var parseDate = d3.timeParse("%Y");
+
+    var x = d3.scaleTime().range([0, width]),
+      y = d3.scaleLinear().range([height, 0]),
+      z = d3.scaleOrdinal(d3.schemeCategory10);
+
+    var stack = d3.stack();
+
+    var area = d3.area()
+      .x(function(d, i) { return x(d.data.date); })
+      .y0(function(d) { return y(d[0]); })
+      .y1(function(d) { return y(d[1]); });
+
+    var g = svg.append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    svg.append("defs").append("clipPath")
+      .attr("id", "clip")
+        .append("rect")
+      .attr("width", width)
+      .attr("height", height);
+
+    d3.csv("graphic1.csv", function(data) {
+      data.forEach(function(d) {
+        d.date = parseDate(d.date);
+        d.natural = +d.natural;
+        d.migration = +d.migration;
+      });
+
+    var keys = data.columns.slice(1);
+
+    x.domain(d3.extent(data, function(d) { return d.date; }));
+    y.domain([0, 140000]);
+    z.domain(keys);
+    stack.keys(keys);
+
+    var layer = g.selectAll(".layer")
+      .data(stack(data))
+      .enter().append("g")
+        .attr("class", "layer");
+
+    layer.append("path")
+        .attr("clip-path", "url(#clip)")
+        .attr("class", "area")
+        .style("fill", function(d) { return z(d.key); })
+        .attr("d", area);
+
+    layer.filter(function(d) { return d[d.length - 1][1] - d[d.length - 1][0] > 0.01; })
+      .append("text")
+        .attr("x", width - 6)
+        .attr("y", function(d) { return y((d[d.length - 1][1])) + 55;})
+        .attr("dy", ".35em")
+        .style("font", "12px 'Open Sans'")
+        .style("text-anchor", "end")
+        .text(function(d) { return d.key; });
+
+    g.append("g")
+        .attr("class", "axis axis--x")
+        .attr("transform", "translate(0," + height + ")")
+        .style("font", "11px 'Open Sans'")
+        .call(d3.axisBottom(x));
+
+    // text label for the x axis
+    svg.append("text")
+        .attr("transform",
+              "translate(" + (width/1.41) + " ," +
+                             (height + margin.top + 40) + ")")
+        .style("text-anchor", "middle")
+        .style("font", "14px 'Open Sans'")
+        .text("Year");
+
+    g.append("g")
+        .attr("class", "axis axis--y")
+        .style("font", "11px 'Open Sans'")
+        .call(d3.axisLeft(y).ticks(6));
+    });
+
+    // text label for the y axis
+    svg.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 10)
+        .attr("x",0 - (height / 2 + 20))
+        .attr("dy", "1em")
+        .style("text-anchor", "middle")
+        .style("font", "14px 'Open Sans'")
+        .text("Population Growth");
+
+    function type(d, i, columns) {
+    d.date = parseDate(d.date);
+    for (var i = 1, n = columns.length; i < n; ++i) d[columns[i]] = d[columns[i]] / 100;
+    return d;
+    }
+
+    function responsivefy(svg) {
+      // get container + svg aspect ratio
+      var container = d3.select(svg.node().parentNode),
+          width = parseInt(svg.style("width")),
+          height = parseInt(svg.style("height")),
+          aspect = width / height;
+
+      // add viewBox and preserveAspectRatio properties,
+      // and call resize so that svg resizes on inital page load
+      svg.attr("viewBox", "0 0 " + width + " " + height)
+          .attr("preserveAspectRatio", "xMinYMid")
+          .call(resize);
+
+      // to register multiple listeners for same event type,
+      // you need to add namespace, i.e., 'click.foo'
+      // necessary if you call invoke this function for multiple svgs
+      // api docs: https://github.com/mbostock/d3/wiki/Selections#on
+      d3.select(window).on("resize." + container.attr("id"), resize);
+
+      // get width of container and resize svg to fit it
+      function resize() {
+          var targetWidth = parseInt(container.style("width"));
+          svg.attr("width", targetWidth);
+          svg.attr("height", Math.round(targetWidth / aspect));
+      }
+    }
+
+    /*Many thanks to these resources for debugging help:
+    https://stackoverflow.com/questions/35997408/d3-hide-overflow-of-the-chart-area-when-y-axis-has-a-min-and-max
+    https://bl.ocks.org/mtranggit/7689a322bbc9261f22c3317291ca506f
+    */
+
+  </script>
+
+</body>
+</html>
