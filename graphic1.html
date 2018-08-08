@@ -2,7 +2,6 @@
 <head>
   <title>Graphic 1</title>
     <script src="https://d3js.org/d3.v4.min.js"></script>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
   <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,700" rel="stylesheet">
   <meta charset="utf-8">
 </head>
@@ -30,18 +29,19 @@
   <p id="source">Source: U.S. Census Bureau (Lindsay Huth | Flatland)</p>
 
   <script>
-    aspect_ratio = 0.7;
-    var frame_width = $('.chart').width();
-    var frame_height = aspect_ratio * frame_width;
+    // aspect_ratio = 0.7;
+    // var frame_width = $('.chart').width();
+    // var frame_height = aspect_ratio * frame_width;
 
     var margin = {top: 70, right: 20, bottom: 40, left: 100}
-    var width = frame_width - margin.left - margin.right
-    var height = frame_height - margin.top - margin.bottom
+    var width = 650 - margin.left - margin.right
+    var height = 400 - margin.top - margin.bottom;
 
     var svg = d3.select('.chart')
       .append('svg')
         .attr('width', width + margin.left + margin.right)
-        .attr('height', height + margin.top + margin.bottom);
+        .attr('height', height + margin.top + margin.bottom)
+        .call(responsivefy);
 
     // title
     svg.append("text")
@@ -141,7 +141,7 @@
     svg.append("text")
         .attr("transform", "rotate(-90)")
         .attr("y", 10)
-        .attr("x",0 - (height / 2 + 40))
+        .attr("x",0 - (height / 1.5))
         .attr("dy", "1em")
         .style("text-anchor", "middle")
         .style("font", "14px 'Open Sans'")
@@ -152,6 +152,34 @@
     for (var i = 1, n = columns.length; i < n; ++i) d[columns[i]] = d[columns[i]] / 100;
     return d;
     }
+
+    // RESPONSIVE
+    function responsivefy(svg) {
+    // get container + svg aspect ratio
+    var container = d3.select(svg.node().parentNode),
+        width = parseInt(svg.style("width")),
+        height = parseInt(svg.style("height")),
+        aspect = width / height;
+
+    // add viewBox and preserveAspectRatio properties,
+    // and call resize so that svg resizes on inital page load
+    svg.attr("viewBox", "0 0 " + width + " " + height)
+        .attr("perserveAspectRatio", "xMinYMid")
+        .call(resize);
+
+    // to register multiple listeners for same event type,
+    // you need to add namespace, i.e., 'click.foo'
+    // necessary if you call invoke this function for multiple svgs
+    // api docs: https://github.com/mbostock/d3/wiki/Selections#on
+    d3.select(window).on("resize." + container.attr("id"), resize);
+
+    // get width of container and resize svg to fit it
+    function resize() {
+        var targetWidth = parseInt(container.style("width"));
+        svg.attr("width", targetWidth);
+        svg.attr("height", Math.round(targetWidth / aspect));
+    }
+}
 
     /*Many thanks to these resources for debugging help:
     https://stackoverflow.com/questions/35997408/d3-hide-overflow-of-the-chart-area-when-y-axis-has-a-min-and-max
