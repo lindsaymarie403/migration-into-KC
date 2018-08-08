@@ -2,6 +2,7 @@
 <head>
   <title>Graphic 1</title>
     <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
   <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,700" rel="stylesheet">
   <meta charset="utf-8">
 </head>
@@ -9,17 +10,6 @@
 <style>
   p {
     margin: 20px 0px 0px 18px;
-  }
-
-  #head {
-    font: 20px 'Open Sans';
-    font-weight: 700;
-  }
-
-  #sub {
-    font: 16px 'Open Sans';
-    margin-top: 5px;
-    margin-bottom: 20px;
   }
 
   #source {
@@ -36,27 +26,45 @@
 </style>
 
 <body>
-  <p id="head">Moves &amp; Maternity</p>
-  <p id="sub">Kansas City Region Population Growth, 2010-2017</p>
-  <!--<svg width="600" height="350"></svg>-->
   <div class="chart"></div>
   <p id="source">Source: U.S. Census Bureau (Lindsay Huth | Flatland)</p>
 
   <script>
-    var margin = {top: 20, right: 20, bottom: 40, left: 100}
-    var width = 600 - margin.left - margin.right
-    var height = 350 - margin.top - margin.bottom
+    aspect_ratio = 0.7;
+    var frame_width = $('.chart').width();
+    var frame_height = aspect_ratio * frame_width;
+
+    var margin = {top: 70, right: 20, bottom: 40, left: 100}
+    var width = frame_width - margin.left - margin.right
+    var height = frame_height - margin.top - margin.bottom
+
     var svg = d3.select('.chart')
       .append('svg')
         .attr('width', width + margin.left + margin.right)
-        .attr('height', height + margin.top + margin.bottom)
-        .call(responsivefy);
+        .attr('height', height + margin.top + margin.bottom);
+
+    // title
+    svg.append("text")
+        .attr("transform",
+              "translate("+ (margin.left/2) + " ," +
+                             (20) + ")")
+        .style("font", "18px 'Open Sans'")
+        .text("Moves & Maternity")
+        .style("font-weight", "700");
+
+    // subtitle
+    svg.append("text")
+        .attr("transform",
+              "translate("+ (margin.left/2) + " ," +
+                             (42) + ")")
+        .style("font", "14px 'Open Sans'")
+        .text("Kansas City Region Population Growth, 2010-2017");
 
     var parseDate = d3.timeParse("%Y");
 
     var x = d3.scaleTime().range([0, width]),
       y = d3.scaleLinear().range([height, 0]),
-      z = d3.scaleOrdinal(d3.schemeCategory10);
+      z = d3.scaleOrdinal().range(["#217fc4", "#97c4e5"]);
 
     var stack = d3.stack();
 
@@ -84,7 +92,7 @@
     var keys = data.columns.slice(1);
 
     x.domain(d3.extent(data, function(d) { return d.date; }));
-    y.domain([0, 140000]);
+    y.domain([0, 125000]);
     z.domain(keys);
     stack.keys(keys);
 
@@ -126,14 +134,14 @@
     g.append("g")
         .attr("class", "axis axis--y")
         .style("font", "11px 'Open Sans'")
-        .call(d3.axisLeft(y).ticks(6));
+        .call(d3.axisLeft(y).tickValues([0,25000,50000,75000,100000,125000]));
     });
 
     // text label for the y axis
     svg.append("text")
         .attr("transform", "rotate(-90)")
         .attr("y", 10)
-        .attr("x",0 - (height / 2 + 20))
+        .attr("x",0 - (height / 2 + 40))
         .attr("dy", "1em")
         .style("text-anchor", "middle")
         .style("font", "14px 'Open Sans'")
@@ -143,33 +151,6 @@
     d.date = parseDate(d.date);
     for (var i = 1, n = columns.length; i < n; ++i) d[columns[i]] = d[columns[i]] / 100;
     return d;
-    }
-
-    function responsivefy(svg) {
-      // get container + svg aspect ratio
-      var container = d3.select(svg.node().parentNode),
-          width = parseInt(svg.style("width")),
-          height = parseInt(svg.style("height")),
-          aspect = width / height;
-
-      // add viewBox and preserveAspectRatio properties,
-      // and call resize so that svg resizes on inital page load
-      svg.attr("viewBox", "0 0 " + width + " " + height)
-          .attr("preserveAspectRatio", "xMinYMid")
-          .call(resize);
-
-      // to register multiple listeners for same event type,
-      // you need to add namespace, i.e., 'click.foo'
-      // necessary if you call invoke this function for multiple svgs
-      // api docs: https://github.com/mbostock/d3/wiki/Selections#on
-      d3.select(window).on("resize." + container.attr("id"), resize);
-
-      // get width of container and resize svg to fit it
-      function resize() {
-          var targetWidth = parseInt(container.style("width"));
-          svg.attr("width", targetWidth);
-          svg.attr("height", Math.round(targetWidth / aspect));
-      }
     }
 
     /*Many thanks to these resources for debugging help:
